@@ -1,0 +1,246 @@
+<!doctype html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>音准</title>
+	<style>
+		body {
+			margin: 0;
+			padding: 0;
+		}
+
+		.droptarget {
+			background-color: #348781;
+		}
+
+		.header {
+			/* background-color: rgba(255, 255, 255, 0.1); */
+			/* backdrop-filter: blur(5px); */
+			/* -webkit-backdrop-filter: blur(5px); */
+			position: fixed;
+			right: 30px;
+			top: 0;
+			left: 0;
+			z-index: 1030;
+			display: block;
+			font-family: 'Courier New', Courier, monospace;
+			font-size: 0.8rem;
+			text-shadow: 1px 1px 1px #ddd;
+		}
+
+		.header div {
+			width: 100%;
+			text-align: right;
+		}
+
+		#note {
+			font-size: 1.5rem;
+		}
+
+		.footer {
+			position: fixed;
+			right: 0;
+			bottom: 0;
+			left: 0;
+			z-index: 1030;
+			text-align: center;
+		}
+
+		.dropdown-list {
+			display: none;
+			background-color: white;
+			position: absolute;
+			width: 200px;
+			max-width: 100%;
+			border: 1px solid #ccc;
+			border-radius: 5px;
+			box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+			padding: 10px;
+			bottom: 100%;
+			left: 50%;
+			transform: translateX(-50%);
+			z-index: 1;
+			text-align: left;
+		}
+
+		.show {
+			display: block !important;
+		}
+
+		.hide {
+			display: none;
+		}
+
+		.btn-tool {
+			padding: 10px;
+			margin: 10px;
+			width: 40px;
+			height: 40px;
+			text-align: center;
+			outline: none;
+			border: none;
+		}
+
+		.btn-tool img {
+			width: 20px;
+			height: 20px;
+		}
+
+		.waveDiv {
+			margin: 0;
+			padding: 0;
+			position: fixed;
+			top: 0;
+			height: 100svh;
+			width: 100%;
+			overflow-y: auto;
+			/* overflow-x: hidden; */
+		}
+
+		.chart {
+			width: 100%;
+			position: relative;
+		}
+
+		.note-column {
+			position: absolute;
+			left: 0px;
+			width: 40px;
+			top: 0;
+			bottom: 0;
+		}
+
+		.note-column span {
+			position: absolute;
+			font-family: monospace;
+			font-size: 12px;
+			left: 10px;
+			width: 30px;
+		}
+
+		.grid-column {
+			position: absolute;
+			left: 0px;
+			right: 0px;
+			top: 0;
+			bottom: 0;
+		}
+
+		.hline {
+			position: absolute;
+			left: 40px;
+			height: 1px;
+			right: 0px;
+		}
+
+		.waveform {
+			position: absolute;
+			right: 0px;
+			top: 0;
+			bottom: 0;
+		}
+
+		.timeform {
+			position: fixed;
+			top: 10px;
+			left: 50px;
+			z-index: 9;
+			display: none;
+		}
+	</style>
+</head>
+
+<body>
+	<div>
+		<div class="header">
+			<div id="note"></div>
+			<div id="pitch"></div>
+			<div id="detune_amt"></div>
+		</div>
+
+		<canvas class="timeform" id="timeform"></canvas>
+
+		<div id="waveDiv" class="waveDiv">
+			<div id="chart" class="chart">
+				<div id="note-column" class="note-column"></div>
+				<div id="grid-column" class="grid-column"></div>
+				<canvas class="waveform" id="waveform"></canvas>
+			</div>
+		</div>
+
+		<footer class="footer">
+			<div class="col text-center">
+				<button id="startBtn" class="btn-tool" onclick="togglePitchDetect()">
+					<img id="playIcon" src="img/play.svg" alt="start">
+					<img id="stopIcon" src="img/stop.svg" alt="stop" class="hide"></button>
+				<!-- <button onclick="this.innerText = togglePlayback()">演示</button> -->
+				<!-- <button onclick="toggleOscillator()">使用振荡器</button> -->
+				<button id="btn-menu" class="btn-tool">
+					<img src="img/menu.svg" alt="info">
+				</button>
+
+				<div class="dropdown-list" id="dropdown-list">
+					<div>
+						<input id="gridCheck" type="checkbox" checked>
+						<label for="gridCheck">显示网格</label>
+						<button id="autoGridBtn">适合高度</button>
+					</div>
+					<div>
+						<input id="timeDomainCheck" type="checkbox" checked>
+						<label for="timeDomainCheck">时域图</label>
+					</div>
+					<div>
+						<input id="waterCheck" type="checkbox" checked>
+						<label for="waterCheck">瀑布图</label>
+					</div>
+					<div>
+						<input id="noiseCheck" type="checkbox" checked>
+						<label for="noiseCheck">降噪</label>
+					</div>
+					<div>
+						阈值
+						<input type="range" min="0" max="255" value="0" class="slider" id="thresholdRange">
+					</div>
+					<div>
+						间距
+						<input type="range" min="5" max="50" value="15" class="slider" id="dhRange">
+					</div>
+					<div>
+						增益
+						<input type="range" min="1" max="100" value="1" class="slider" id="gainRange">
+					</div>
+					<div>
+						<label for="baseSelect">基准</label>
+						<select name="baseSelect" id="baseSelect">
+							<option value="0">A0</option>
+							<option value="1">A1</option>
+							<option value="2" selected="true">A2</option>
+							<option value="3">A3</option>
+							<option value="4">A4</option>
+							<option value="5">A5</option>
+							<option value="6">A6</option>
+							<option value="7">A7</option>
+						</select>
+					</div>
+					声音设备
+					<div id="audioDevices"></div>
+				</div>
+			</div>
+
+		</footer>
+	</div>
+	<script src="pitchdetect.js"></script>
+	<!-- Google tag (gtag.js) -->
+	<script async src="https://www.googletagmanager.com/gtag/js?id=G-TQS33EKTZS"></script>
+	<script>
+		window.dataLayer = window.dataLayer || [];
+		function gtag() { dataLayer.push(arguments); }
+		gtag('js', new Date());
+
+		gtag('config', 'G-TQS33EKTZS');
+	</script>
+</body>
+
+</html>
