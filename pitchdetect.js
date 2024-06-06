@@ -36,6 +36,7 @@ var tmpCanvas = null;
 var showTimeDomain = true;
 var waveDiv;
 var timeCanvas;
+var inEarMonitor = false;
 
 function setBase() {
 	let baseFreq = 27.5 * Math.pow(2, baseLevel); //A0: 27.5 Hz; A1: 55.0 Hz; A2: 110.0 Hz; A3: 220.0 Hz; A4: 440.0 Hz; A5: 880.0 Hz
@@ -116,6 +117,15 @@ window.onload = function () {
 	noiseElem.addEventListener("change", function () {
 		denoise = this.checked;
 		setCookie('denoise', denoise);
+		if (isLiveInput) {
+			restartPitchDetect();
+		}
+	});
+
+	//耳返
+	let iemCheck = document.getElementById("iemCheck");
+	iemCheck.addEventListener("change", function () {
+		inEarMonitor = this.checked;
 		if (isLiveInput) {
 			restartPitchDetect();
 		}
@@ -320,6 +330,10 @@ function startPitchDetect() {
 			mediaStreamSource.connect(gainNode);
 			gainNode.connect(analyser);
 
+			if (inEarMonitor) {
+				gainNode.connect(audioContext.destination);
+			}
+
 			isLiveInput = true;
 			isPlaying = false;
 			let playIcon = document.getElementById("playIcon");
@@ -460,6 +474,9 @@ function drawScale() {
 			let note = document.createElement('span');
 			note.style.top = ((chartHeight - dh * n) - 5) + 'px';
 			note.style.height = dh + 'px';
+			if (dh < 13) {
+				note.style.fontSize = dh + 'px';
+			}
 			note.style.color = noteColors[idx];
 			let txt = document.createTextNode(noteStrings[idx] + (Math.floor((n + 9) / 12) + baseLevel));
 			note.appendChild(txt);
